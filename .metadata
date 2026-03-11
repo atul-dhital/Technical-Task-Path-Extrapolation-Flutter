@@ -1,0 +1,11 @@
+# This file tracks properties of this Flutter project.
+# Used by Flutter tool to assess project state and version.
+project_type: app
+
+# The following section contains dependencies that are managed by the Flutter tool.
+# Manual changes here may be lost.
+version:
+  revision: unknown
+  channel: unknown
+
+project_name: path_extrapolation
