@@ -132,24 +132,11 @@ class PathPainter extends CustomPainter {
 
         Offset clipPoint = state.sampledPath!.getPositionAt(clipArcLength);
         
-        // Find tangent at the clip point using a tiny delta
-        double delta = 0.5;
-        double s1 = (clipArcLength - delta).clamp(0.0, state.sampledPath!.totalLength).toDouble();
-        double s2 = (clipArcLength + delta).clamp(0.0, state.sampledPath!.totalLength).toDouble();
+        // Compute tangent using adaptive delta
+        double delta = _computeOptimalTangentDelta(clipArcLength, state.sampledPath!.totalLength);
+        Offset tangent = state.sampledPath!.getTangentAt(clipArcLength, delta: delta);
         
-        Offset p1 = state.sampledPath!.getPositionAt(s1);
-        Offset p2 = state.sampledPath!.getPositionAt(s2);
-        
-        Offset tangent = p2 - p1;
-        double len = tangent.distance;
-        if (len > 0) {
-          tangent /= len;
-        } else {
-          // Fallback if tangent can't be computed
-          tangent = const Offset(1, 0); 
-        }
-        
-        // Perpendicular vector for the boundary line
+        // Perpendicular vector for the boundary line (rotate 90 degrees counterclockwise)
         Offset normal = Offset(-tangent.dy, tangent.dx);
         
         // We want to keep everything BEFORE the clipPoint.
@@ -191,6 +178,24 @@ class PathPainter extends CustomPainter {
         canvas.drawCircle(circle.center, circle.radius, circleStrokePaint);
       }
     }
+  }
+
+  /// Computes an optimal delta for tangent calculation.
+  /// Uses a small adaptive delta, with fallback to larger values at boundaries.
+  double _computeOptimalTangentDelta(double arcLength, double totalLength) {
+    const double baseDelta = 0.5;
+    const double maxDelta = 2.0;
+    
+    // If we're very close to either boundary, use a slightly larger delta
+    double distToStart = arcLength;
+    double distToEnd = totalLength - arcLength;
+    double minDistToBoundary = distToStart < distToEnd ? distToStart : distToEnd;
+    
+    if (minDistToBoundary < baseDelta) {
+      return (minDistToBoundary * 0.4).clamp(baseDelta, maxDelta);
+    }
+    
+    return baseDelta;
   }
 
   void _drawPoints(Canvas canvas) {

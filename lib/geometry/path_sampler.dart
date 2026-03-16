@@ -49,6 +49,30 @@ class SampledPath {
 
     return p1 + (p2 - p1) * t;
   }
+
+  /// Computes the tangent vector at a given arc length using finite differences.
+  /// Returns a normalized tangent vector, or Offset(1, 0) if tangent cannot be computed.
+  Offset getTangentAt(double arcLength, {double delta = 0.5}) {
+    if (points.isEmpty) return const Offset(1, 0);
+    if (points.length == 1) return const Offset(1, 0);
+
+    // Compute points slightly before and after the target arc length
+    double s1 = (arcLength - delta).clamp(0.0, totalLength).toDouble();
+    double s2 = (arcLength + delta).clamp(0.0, totalLength).toDouble();
+
+    Offset p1 = getPositionAt(s1);
+    Offset p2 = getPositionAt(s2);
+
+    Offset tangent = p2 - p1;
+    double len = tangent.distance;
+
+    if (len > 1e-6) {
+      return tangent / len;
+    }
+
+    // Fallback: return horizontal direction
+    return const Offset(1, 0);
+  }
 }
 
 class PathSampler {
