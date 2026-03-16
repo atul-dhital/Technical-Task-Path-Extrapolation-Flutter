@@ -1,187 +1,164 @@
-# Path Extrapolation & Circle Packing
+# Path Extrapolation and Circle Packing
 
-A Flutter application demonstrating geometric path extrapolation with PCA-based point reduction, Catmull-Rom spline generation, arc-length circle packing, and precise endpoint clipping.
+Interactive Flutter application for geometric path extrapolation with deterministic PCA reduction, Catmull-Rom spline generation, arc-length parameterization, edge-to-edge circle packing, and exact endpoint clipping.
 
-## Quick Start
+## Overview
 
-### Setup
+This project demonstrates a complete geometry pipeline:
+
+1. Reduce three candidate points into one point using PCA projection logic.
+2. Build a smooth 5-point Catmull-Rom spline.
+3. Reparameterize the spline by arc length.
+4. Place circles at diameter spacing along the path.
+5. Clip the final circle exactly at the endpoint using a tangent-based half-plane.
+
+All geometry is recomputed in real time when points are dragged.
+
+## Features
+
+- Interactive drag controls for candidate and path points
+- Deterministic PCA-based reduction from 3 candidates to 1 reduced point
+- Smooth Catmull-Rom spline through P1-P5
+- Arc-length lookup for stable spacing on curved paths
+- Circle packing with center spacing = `2 * radius`
+- Endpoint clipping perpendicular to local tangent
+- Debug overlays: PCA axis, projections, clipping line
+- Optional progressive animation of packed circles
+
+## Tech Stack
+
+- Flutter
+- Dart
+- CustomPainter for rendering
+- ChangeNotifier for app state orchestration
+
+## Project Structure
+
+```text
+lib/
+	main.dart                      # App shell, controls, legend
+	geometry/
+		models.dart                  # Shared geometry models
+		pca_reduction.dart           # PCA and candidate reduction logic
+		spline_builder.dart          # Catmull-Rom spline sampling
+		path_sampler.dart            # Arc-length sampling and tangent lookup
+		circle_packer.dart           # Circle placement in arc domain
+	state/
+		app_state.dart               # Central state + recompute trigger
+	painters/
+		path_painter.dart            # Read-only drawing of all layers
+	widgets/
+		path_canvas.dart             # Pointer gestures and hit testing
+test/
+	geometry_test.dart             # Geometry-focused tests
+```
+
+## Prerequisites
+
+- Flutter SDK 3.x (project lock indicates Flutter >= 3.18 prerelease range)
+- Dart SDK 3.x
+
+Verify installation:
+
+```bash
+flutter doctor
+flutter --version
+```
+
+## Setup
+
 ```bash
 flutter pub get
-flutter run -d chrome    # or: windows, macos, linux
 ```
 
-### Usage
-- **Drag any point** to see real-time geometry updates
-- **Toggle Debug Overlays** to see PCA axis and projections
-- **Adjust Circle Radius** slider to change circle packing density
-- **Animation** shows circles progressively along the path
+## Run
 
-## Architecture
+### Option A: Standard Flutter command
 
-### Code Organization
-```
-lib/
-├── geometry/              # Pure geometry (NO Flutter deps)
-│   ├── models.dart       # PathPoint, BestFitLine, PackedCircle
-│   ├── pca_reduction.dart         # PCA eigenvalue decomposition
-│   ├── spline_builder.dart        # Catmull-Rom spline
-│   ├── path_sampler.dart          # Arc-length parameterization
-│   └── circle_packer.dart         # Circle edge-to-edge packing
-│
-├── state/app_state.dart           # State management (AppState with ChangeNotifier)
-├── painters/path_painter.dart     # Canvas rendering (CustomPainter)
-├── widgets/path_canvas.dart       # Interactive gestures (GestureDetector)
-└── main.dart                      # UI scaffold & controls
+```bash
+flutter run -d chrome
 ```
 
-**Key constraint**: All geometry is computed in `geometry/` (pure Dart), rendering happens in `painters/`, no mutations occur during painting.
+### Option B: If Flutter is not on PATH (Windows example)
 
-## Core Algorithms
+```powershell
+& "C:\Users\dhita\flutter\bin\flutter.bat" run -d chrome
+```
 
-### 1. Reduction Step
-- Takes 3 candidate points and computes a best-fit line via PCA
-- Projects all candidates onto this line
-- **Selects the projection with maximum distance from P2 as the reduced point P1**
-- Deterministic and numerically stable (handles vertical/horizontal/collinear cases)
+### Option C: Web server target
 
-**File**: `lib/geometry/pca_reduction.dart`
+```bash
+flutter run -d web-server --web-hostname localhost --web-port 8080
+```
 
-### 2. Path Generation
-- Generates a smooth Catmull-Rom cubic spline through 5 points (P1–P5)
-- Uses phantom points at boundaries for smooth derivatives
-- Samples at 100 points per segment (~400 total points)
+## How to Use
 
-**File**: `lib/geometry/spline_builder.dart`
+- Drag orange points (`C1-C3`) to change candidate inputs.
+- Drag blue points (`P2-P5`) to reshape the path.
+- Observe green point (`P1`) recomputed from PCA reduction.
+- Adjust radius slider to change packing density.
+- Toggle overlays and clipping visualization for debugging.
+
+## Algorithm Notes
+
+### 1. PCA Reduction
+
+- Computes centroid and covariance of candidates.
+- Finds principal direction from dominant eigenvalue/eigenvector.
+- Projects each candidate onto that axis.
+- Selects projection farthest from `P2` as reduced point `P1`.
+
+### 2. Spline Generation
+
+- Uses Catmull-Rom cubic segments.
+- Adds phantom points at both ends for smooth entry/exit tangents.
+- Densely samples the curve for stable arc-length approximation.
 
 ### 3. Arc-Length Parameterization
-- Converts dense spline points to arc-length domain
-- Enables O(log n) position lookups via binary search
-- Computes tangent vectors via finite differences (with adaptive delta for stability)
 
-**File**: `lib/geometry/path_sampler.dart`
+- Builds cumulative distance table from sampled polyline points.
+- Uses binary search for `O(log n)` position lookup at arc `s`.
+- Uses finite differences for tangent estimation.
 
 ### 4. Circle Packing
-- Places circles with **diameter spacing (2r)** along the arc-length parameterized path
-- First circle boundary starts exactly at arc = 0
-- Works on arbitrary paths (straight, curved, spirals)
 
-**File**: `lib/geometry/circle_packer.dart`
+- First circle center starts at `s = r` so boundary begins at path start.
+- Next centers are spaced by `2r` in arc space.
+- Handles short/degenerate paths safely.
 
 ### 5. Endpoint Clipping
-- Uses **half-plane clipping perpendicular to path tangent**
-- Final circle clips precisely at path endpoint with no overshoot
-- Animates smoothly during circle progression
 
-**File**: `lib/painters/path_painter.dart`
+- Computes tangent at endpoint.
+- Builds perpendicular clip line through endpoint.
+- Renders only the valid half-plane portion of final circles.
 
-## Edge Cases Handled
+## Quality and Constraints
 
-| Case | Solution |
-|------|----------|
-| Straight path (horizontal/vertical) | PCA correctly identifies axis; circles stack perfectly |
-| Tight curves (S-curve, spiral) | Arc-length spacing keeps circles edge-to-edge |
-| Vertical candidates (zero covariance) | Eigenvalue computation defaults to axis vectors |
-| Overlapping points | Zero-length segments skipped gracefully |
-| Path shorter than circle diameter | Returns empty circle list; no errors |
-| Tangent at boundaries | Adaptive delta prevents numerical issues |
-
-## Implementation Details
-
-### No Render Mutations
-```dart
-// ✅ Correct: Compute in state, render readonly
-class AppState extends ChangeNotifier {
-  void recompute() {
-    // Geometry computed here
-    circles = CirclePacker.pack(sampledPath, radius);
-    notifyListeners();  // Trigger rebuild
-  }
-}
-
-// ✅ Correct: Paint only reads state
-class PathPainter extends CustomPainter {
-  void paint(Canvas canvas, Size size) {
-    // No state changes, only drawing
-    for (var circle in state.circles) {
-      canvas.drawCircle(circle.center, circle.radius, paint);
-    }
-  }
-}
-```
-
-### Deterministic Geometry
-- PCA reduction always selects the same point for identical inputs
-- No randomness or frame-dependent calculations
-- All floating-point operations guarded against division-by-zero
-
-### Separation of Concerns
-```
-User Interaction (drag)
-        ↓
-AppState.moveCandidate/movePathPoint()
-        ↓
-AppState.recompute() — Geometry calculated here
-  ├── PCA reduction
-  ├── Spline generation
-  ├── Arc-length sampling
-  └── Circle packing
-        ↓
-AppState.notifyListeners()
-        ↓
-CustomPainter.paint() — Drawing happens here (readonly)
-```
-
-## Visual Features
-
-- **Orange circles**: Candidate input points (C1–C3)
-- **Blue circles**: Path control points (P2–P5)
-- **Green circle**: Reduced point P1 (computed)
-- **Blue curve**: Catmull-Rom spline
-- **Pink circles**: Packed circles along path
-- **Red line**: Endpoint clipping boundary (debug mode)
-- **Cyan dashes**: Projection guides (debug mode)
-- **White dashed line**: PCA best-fit axis (debug mode)
-
-## Performance
-
-- Full geometry recompute: ~2–5 ms
-- Canvas render (circles + path): ~1–3 ms
-- Total frame time: ~5–8 ms (well under 16 ms for 60 FPS)
-- Memory: < 20 KB for all geometry state
+- Geometry is pure Dart inside `lib/geometry`.
+- Rendering is read-only inside `path_painter.dart`.
+- No state mutations inside paint routines.
+- Deterministic output for identical inputs.
+- Defensive handling for degenerate or near-zero cases.
 
 ## Testing
 
-### Manual Verification
-Test these scenarios to validate implementation:
+Run tests:
 
-1. **Straight horizontal path**: All points at y=300 → circles should stack horizontally
-2. **Straight vertical path**: All points at x=300 → circles should stack vertically  
-3. **S-curve**: Points form a bend → circles follow curve, stay edge-to-edge
-4. **Rapid dragging**: Move points quickly → no lag, no flicker
-5. **Short path** (< 1 diameter): No circles appear, no errors
-6. **Toggle controls**: Debug overlays, circles, clipping should toggle independently
+```bash
+flutter test
+```
 
-### Critical Features to Verify
-- ✅ First circle boundary starts exactly at path start (no offset)
-- ✅ Circles are edge-to-edge (no visible gaps)
-- ✅ Final circle clips cleanly at path endpoint (no overshoot)
-- ✅ PCA axis passes through candidate centroid
-- ✅ Projections are perpendicular to PCA line
-- ✅ Spline passes through all 5 control points
-- ✅ Dragging points updates geometry instantly
-- ✅ Animation progresses smoothly
+For manual validation scenarios, see:
 
-## Known Limitations
+- `TESTING.md`
+- `IMPLEMENTATION.md`
+- `COMPLETION_SUMMARY.md`
+- `INDEX.md`
 
-- Circle packing assumes fixed-diameter circles (no variable sizing)
-- Path is limited to 5 control points (by design)
-- Clipping uses half-plane (works for all standard path shapes)
+## Known Notes
 
-## References
-
-- **Catmull-Rom Spline**: https://en.wikipedia.org/wiki/Catmull%E2%80%93Rom_spline
-- **Principal Component Analysis**: https://en.wikipedia.org/wiki/Principal_component_analysis
-- **Arc-Length Parameterization**: https://mathworld.wolfram.com/ArcLength.html
+- On web, Flutter may show deprecation warnings for service worker/bootstrap APIs in `web/index.html`; these are non-blocking for current execution.
+- Windows desktop target is not configured in this repository by default.
 
 ## License
 
