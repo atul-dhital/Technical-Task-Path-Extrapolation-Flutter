@@ -8,16 +8,13 @@ class SampledPath {
 
   SampledPath(this.points, this.cumulativeLengths, this.totalLength);
 
-  /// Returns the interpolated position at a specific arc length along the path.
   Offset getPositionAt(double arcLength) {
     if (points.isEmpty) return Offset.zero;
     if (points.length == 1) return points.first;
     
-    // Clamp to bounds
     if (arcLength <= 0) return points.first;
     if (arcLength >= totalLength) return points.last;
 
-    // Binary search for the correct segment
     int low = 0;
     int high = cumulativeLengths.length - 1;
 
@@ -32,11 +29,9 @@ class SampledPath {
       }
     }
 
-    // `low` is the index of the first cumulative length > arcLength
     int index = low;
     if (index == 0) return points.first;
 
-    // Interpolate between index-1 and index
     double prevLength = cumulativeLengths[index - 1];
     double nextLength = cumulativeLengths[index];
     double segmentLength = nextLength - prevLength;
@@ -50,13 +45,10 @@ class SampledPath {
     return p1 + (p2 - p1) * t;
   }
 
-  /// Computes the tangent vector at a given arc length using finite differences.
-  /// Returns a normalized tangent vector, or Offset(1, 0) if tangent cannot be computed.
   Offset getTangentAt(double arcLength, {double delta = 0.5}) {
     if (points.isEmpty) return const Offset(1, 0);
     if (points.length == 1) return const Offset(1, 0);
 
-    // Compute points slightly before and after the target arc length
     double s1 = (arcLength - delta).clamp(0.0, totalLength).toDouble();
     double s2 = (arcLength + delta).clamp(0.0, totalLength).toDouble();
 
@@ -70,13 +62,11 @@ class SampledPath {
       return tangent / len;
     }
 
-    // Fallback: return horizontal direction
     return const Offset(1, 0);
   }
 }
 
 class PathSampler {
-  /// Takes a dense list of spline points and calculates their cumulative arc lengths.
   static SampledPath sample(List<Offset> points) {
     if (points.isEmpty) return SampledPath([], [], 0.0);
     

@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-/// Represents a point in 2D space that can be dragged.
 class PathPoint {
   Offset position;
   final String label;
@@ -8,14 +7,12 @@ class PathPoint {
   PathPoint(this.position, this.label);
 }
 
-/// Represents the best fit line found via PCA.
 class BestFitLine {
   final Offset centroid;
-  final Offset direction; // Unit vector
+  final Offset direction;
 
   BestFitLine(this.centroid, this.direction);
 
-  /// Projects a given point onto this line.
   Offset project(Offset point) {
     Offset v = point - centroid;
     double dotProduct = v.dx * direction.dx + v.dy * direction.dy;
@@ -23,7 +20,6 @@ class BestFitLine {
   }
 }
 
-/// Represents a circle placed along the path.
 class PackedCircle {
   final Offset center;
   final double radius;

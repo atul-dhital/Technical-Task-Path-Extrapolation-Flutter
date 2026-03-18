@@ -6,20 +6,16 @@ import '../geometry/path_sampler.dart';
 import '../geometry/circle_packer.dart';
 
 class AppState extends ChangeNotifier {
-  // Draggable points
   List<PathPoint> candidates = [];
-  List<PathPoint> pathPoints = []; // 4 points (P2, P3, P4, P5)
+  List<PathPoint> pathPoints = [];
   
-  // Toggles
   bool showDebug = true;
   bool showCircles = true;
   bool showClipBoundary = true;
   bool enableAnimation = true;
 
-  // Animation
   double animationProgress = 1.0; 
 
-  // Computed state
   Offset? reducedPoint;
   BestFitLine? pcaLine;
   SampledPath? sampledPath;
@@ -29,7 +25,6 @@ class AppState extends ChangeNotifier {
   void initialize(Size size) {
     if (candidates.isNotEmpty) return;
 
-    // Initial proportional layout
     candidates = [
       PathPoint(Offset(size.width * 0.1, size.height * 0.2), "C1"),
       PathPoint(Offset(size.width * 0.15, size.height * 0.4), "C2"),
@@ -92,7 +87,6 @@ class AppState extends ChangeNotifier {
   void recompute() {
     if (candidates.isEmpty || pathPoints.isEmpty) return;
 
-    // 1. Reduction Step
     pcaLine = PCA.computeBestFitLine(candidates.map((c) => c.position).toList());
     
     Offset bestProjected = candidates.first.position;
@@ -109,14 +103,11 @@ class AppState extends ChangeNotifier {
     }
     reducedPoint = bestProjected;
 
-    // 2. Smooth Path
     List<Offset> allPoints = [reducedPoint!, ...pathPoints.map((p) => p.position)];
     List<Offset> rawSplinePoints = SplineBuilder.buildCatmullRom(allPoints, samplesPerSegment: 100);
 
-    // 3. Arc length parameterization
     sampledPath = PathSampler.sample(rawSplinePoints);
 
-    // 4. Circle Packing
     circles = CirclePacker.pack(sampledPath!, circleRadius);
 
     notifyListeners();

@@ -17,8 +17,6 @@ void main() {
 
       final selected = ReductionStep.reduce(candidates, p2);
       
-      // Expected to find the projection furthest from (200,200). 
-      // Because they lie on the line y=x, the one furthest is (10,10).
       expect((selected - const Offset(10, 10)).distance, lessThan(0.1));
     });
 

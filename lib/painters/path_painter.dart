@@ -11,23 +11,18 @@ class PathPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (state.sampledPath == null) return;
     
-    // Draw background grid (optional polish)
     _drawGrid(canvas, size);
 
-    // 1. Draw Debug Overlays (Candidates, PCA, Projections)
     if (state.showDebug) {
       _drawDebugOverlays(canvas);
     }
 
-    // 2. Draw Smooth Spline
     _drawSmoothPath(canvas);
 
-    // 3. Draw Circles with Clipping
     if (state.showCircles) {
       _drawCirclePacking(canvas);
     }
     
-    // 4. Draw Interactive Points
     _drawPoints(canvas);
   }
 
@@ -47,24 +42,21 @@ class PathPainter extends CustomPainter {
   void _drawDebugOverlays(Canvas canvas) {
     if (state.pcaLine == null || state.reducedPoint == null) return;
 
-    // Draw PCA axis
     final pcaPaint = Paint()
       ..color = Colors.white.withOpacity(0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-      
-    // Extend the line across the screen
+       
     Offset c = state.pcaLine!.centroid;
     Offset dir = state.pcaLine!.direction;
     canvas.drawLine(c - dir * 1000, c + dir * 1000, pcaPaint);
 
-    // Draw projections
     final projPaint = Paint()
       ..color = Colors.cyan.withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
       ..strokeMiterLimit = 1
-      ..strokeCap = StrokeCap.round; // Dash effect in full implementation is usually PathDash
+      ..strokeCap = StrokeCap.round;
 
     for (var candidate in state.candidates) {
       Offset pos = candidate.position;
@@ -91,15 +83,8 @@ class PathPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Only draw the path up to the animation progress if animation is playing
     double clipArcLength = state.sampledPath!.totalLength * state.animationProgress;
     
-    // Instead of computing a sub-path, we can use a clipping region or just rely on the path metrics.
-    // For simplicity, we draw the whole path but clip the canvas to the bounding rect of the segment, 
-    // or we draw a PathMetric extracted subpath.
-    // However, the spec doesn't require the Path itself to be animating, just the circles.
-    // The instructions say: "Animate a progress value from 0 to 1 controlling circle visibility".
-    // So we'll render the full path line.
     canvas.drawPath(path, paint);
   }
 
@@ -118,30 +103,22 @@ class PathPainter extends CustomPainter {
     double clipArcLength = state.sampledPath!.totalLength * state.animationProgress;
 
     for (var circle in state.circles) {
-      // If the circle's starting edge is beyond the current animation frontier, skip it.
       if (circle.arcLengthStart >= clipArcLength) {
         break;
       }
 
-      // If the circle straddles the end of the total path (in final state) OR straddles the animation boundary
       bool needsClipping = circle.arcLengthEnd > clipArcLength;
 
       if (needsClipping) {
-        // We perform a half-plane clip perpendicular to the path at clipArcLength.
         canvas.save();
 
         Offset clipPoint = state.sampledPath!.getPositionAt(clipArcLength);
         
-        // Compute tangent using adaptive delta
         double delta = _computeOptimalTangentDelta(clipArcLength, state.sampledPath!.totalLength);
         Offset tangent = state.sampledPath!.getTangentAt(clipArcLength, delta: delta);
         
-        // Perpendicular vector for the boundary line (rotate 90 degrees counterclockwise)
         Offset normal = Offset(-tangent.dy, tangent.dx);
         
-        // We want to keep everything BEFORE the clipPoint.
-        // Construct a huge quad that represents the valid half-plane.
-        // Moving backwards along the tangent from the clip point.
         const double side = 5000.0;
         
         Offset boundaryLeft = clipPoint + normal * side;
@@ -158,11 +135,9 @@ class PathPainter extends CustomPainter {
 
         canvas.clipPath(clipPath);
         
-        // Draw the circle inside the clipped canvas
         canvas.drawCircle(circle.center, circle.radius, circlePaint);
         canvas.drawCircle(circle.center, circle.radius, circleStrokePaint);
 
-        // Debug Clip Boundary visual
         if (state.showClipBoundary) {
           final clipLinePaint = Paint()
             ..color = Colors.redAccent
@@ -173,20 +148,16 @@ class PathPainter extends CustomPainter {
 
         canvas.restore();
       } else {
-        // Draw normally
         canvas.drawCircle(circle.center, circle.radius, circlePaint);
         canvas.drawCircle(circle.center, circle.radius, circleStrokePaint);
       }
     }
   }
 
-  /// Computes an optimal delta for tangent calculation.
-  /// Uses a small adaptive delta, with fallback to larger values at boundaries.
   double _computeOptimalTangentDelta(double arcLength, double totalLength) {
     const double baseDelta = 0.5;
     const double maxDelta = 2.0;
     
-    // If we're very close to either boundary, use a slightly larger delta
     double distToStart = arcLength;
     double distToEnd = totalLength - arcLength;
     double minDistToBoundary = distToStart < distToEnd ? distToStart : distToEnd;
@@ -203,7 +174,6 @@ class PathPainter extends CustomPainter {
     final otherPaint = Paint()..color = Colors.lightBlue;
     final reducedPaint = Paint()..color = Colors.greenAccent;
     
-    // Reduced point
     if (state.reducedPoint != null) {
       canvas.drawCircle(state.reducedPoint!, 14, reducedPaint);
       canvas.drawCircle(state.reducedPoint!, 14, Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2);
@@ -211,14 +181,12 @@ class PathPainter extends CustomPainter {
       _drawLabel(canvas, "P1", state.reducedPoint!, Colors.black);
     }
 
-    // Candidates
     for (var c in state.candidates) {
       canvas.drawCircle(c.position, 12, candidatePaint);
       canvas.drawCircle(c.position, 12, Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2);
       _drawLabel(canvas, c.label, c.position, Colors.black);
     }
 
-    // Path points (P2-P5)
     for (var p in state.pathPoints) {
       canvas.drawCircle(p.position, 12, otherPaint);
       canvas.drawCircle(p.position, 12, Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2);
@@ -242,5 +210,5 @@ class PathPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true; // AppState acts as Listenable
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

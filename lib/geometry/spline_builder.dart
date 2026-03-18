@@ -1,15 +1,11 @@
 import 'dart:ui';
 
 class SplineBuilder {
-  /// Generates a Catmull-Rom spline from a set of control points.
-  /// Converts the 5 input points into a continuous sequence of points.
   static List<Offset> buildCatmullRom(List<Offset> points, {int samplesPerSegment = 50}) {
     if (points.length < 2) return List.from(points);
 
     List<Offset> path = [];
     
-    // Add phantom points for the Catmull-Rom curve to ensure the spline
-    // properly passes through the first and last control points.
     List<Offset> controlPoints = [
       points.first - (points[1] - points.first),
       ...points,
@@ -18,8 +14,8 @@ class SplineBuilder {
 
     for (int i = 0; i < points.length - 1; i++) {
       Offset p0 = controlPoints[i];
-      Offset p1 = controlPoints[i + 1]; // Current segment start
-      Offset p2 = controlPoints[i + 2]; // Current segment end
+      Offset p1 = controlPoints[i + 1];
+      Offset p2 = controlPoints[i + 2];
       Offset p3 = controlPoints[i + 3];
 
       for (int t = 0; t < samplesPerSegment; t++) {
@@ -27,7 +23,6 @@ class SplineBuilder {
         path.add(_catmullRom(p0, p1, p2, p3, mt));
       }
     }
-    // Ensure the exact last point is included
     path.add(points.last);
     return path;
   }

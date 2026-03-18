@@ -22,10 +22,8 @@ class _PathCanvasWidgetState extends State<PathCanvasWidget> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
-        // Find which point was grabbed
         Offset pos = details.localPosition;
         
-        // Check Candidates first
         for (int i = 0; i < widget.state.candidates.length; i++) {
           if ((widget.state.candidates[i].position - pos).distance <= hitRadius) {
             _draggingCandidateIndex = i;
@@ -33,7 +31,6 @@ class _PathCanvasWidgetState extends State<PathCanvasWidget> {
           }
         }
         
-        // Check Path Points (P2-P5)
         for (int i = 0; i < widget.state.pathPoints.length; i++) {
           if ((widget.state.pathPoints[i].position - pos).distance <= hitRadius) {
             _draggingPathPointIndex = i;

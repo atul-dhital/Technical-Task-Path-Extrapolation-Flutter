@@ -75,7 +75,6 @@ class _PathExtrapolationHomeState extends State<PathExtrapolationHome> with Sing
 
           return Column(
             children: [
-              // Interactive Canvas
               Expanded(
                 child: Container(
                   margin: const EdgeInsets.all(16),
@@ -87,7 +86,6 @@ class _PathExtrapolationHomeState extends State<PathExtrapolationHome> with Sing
                   child: Stack(
                     children: [
                       PathCanvasWidget(state: _appState),
-                      // Legend Overlay
                       const Positioned(
                         top: 16,
                         right: 16,
@@ -98,7 +96,6 @@ class _PathExtrapolationHomeState extends State<PathExtrapolationHome> with Sing
                 ),
               ),
 
-              // Controls Panel
               Container(
                 padding: const EdgeInsets.all(16),
                 color: Colors.black45,
