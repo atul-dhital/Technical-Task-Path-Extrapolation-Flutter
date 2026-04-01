@@ -20,6 +20,13 @@ class BestFitLine {
   }
 }
 
+class ReductionResult {
+  final Offset bestPoint;
+  final BestFitLine line;
+
+  ReductionResult(this.bestPoint, this.line);
+}
+
 class PackedCircle {
   final Offset center;
   final double radius;

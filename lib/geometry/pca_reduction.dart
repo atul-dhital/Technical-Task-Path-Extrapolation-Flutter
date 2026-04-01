@@ -37,7 +37,11 @@ class PCA {
 
     Offset dir;
     if (cXY == 0) {
-      dir = cXX > cYY ? const Offset(1, 0) : const Offset(0, 1);
+      if (cXX == 0 && cYY == 0) {
+        dir = const Offset(1, 0); // Default for identical candidates
+      } else {
+        dir = cXX > cYY ? const Offset(1, 0) : const Offset(0, 1);
+      }
     } else {
       dir = Offset(cXY, lambda1 - cXX);
       double len = dir.distance;
@@ -53,16 +57,16 @@ class PCA {
 }
 
 class ReductionStep {
-  static Offset reduce(List<Offset> candidates, Offset p2, {BestFitLine? outLine}) {
-    if (candidates.isEmpty) return Offset.zero;
-    if (candidates.length == 1) return candidates.first;
+  static ReductionResult reduce(List<Offset> candidates, Offset p2) {
+    if (candidates.isEmpty) {
+      return ReductionResult(Offset.zero, BestFitLine(Offset.zero, const Offset(1, 0)));
+    }
+    if (candidates.length == 1) {
+      return ReductionResult(candidates.first, BestFitLine(candidates.first, const Offset(1, 0)));
+    }
 
     BestFitLine line = PCA.computeBestFitLine(candidates);
     
-    if (outLine != null) {
-      outLine = line; 
-    }
-
     Offset bestProjected = candidates.first;
     double maxDistSq = -1.0;
 
@@ -75,6 +79,6 @@ class ReductionStep {
       }
     }
 
-    return bestProjected;
+    return ReductionResult(bestProjected, line);
   }
 }

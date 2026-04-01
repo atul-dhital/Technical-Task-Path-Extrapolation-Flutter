@@ -55,5 +55,45 @@ void main() {
       expect(circles[1].center.dx, closeTo(30, 0.5));
       expect((circles[1].center - circles[0].center).distance, closeTo(20.0, 0.5));
     });
+
+    test('PCA: Vertical axis detection', () {
+      final points = [
+        const Offset(100, 0),
+        const Offset(100, 50),
+        const Offset(100, 100),
+      ];
+      final line = PCA.computeBestFitLine(points);
+      
+      // Expect direction to be strictly vertical (0, 1) or (0, -1)
+      expect(line.direction.dx, closeTo(0.0, 0.001));
+      expect(line.direction.dy.abs(), closeTo(1.0, 0.001));
+    });
+
+    test('PCA: Identical candidates robustness', () {
+      final points = [
+        const Offset(100, 100),
+        const Offset(100, 100),
+        const Offset(100, 100),
+      ];
+      final line = PCA.computeBestFitLine(points);
+      
+      // Expect centroid at 100, 100
+      expect(line.centroid, const Offset(100, 100));
+      // Expect a valid, albeit default, direction (PCA should not crash)
+      expect(line.direction.distance, closeTo(1.0, 0.001));
+    });
+
+    test('Endpoint Clipping: Tangent orientation at end of path', () {
+      final points = [
+        const Offset(0, 0),
+        const Offset(100, 0),
+      ];
+      final path = PathSampler.sample(points);
+      
+      // Tangent at the end should point forward (+X)
+      final tangent = path.getTangentAt(100.0);
+      expect(tangent.dx, greaterThan(0.9));
+      expect(tangent.dy, closeTo(0.0, 0.01));
+    });
   });
 }

@@ -87,21 +87,13 @@ class AppState extends ChangeNotifier {
   void recompute() {
     if (candidates.isEmpty || pathPoints.isEmpty) return;
 
-    pcaLine = PCA.computeBestFitLine(candidates.map((c) => c.position).toList());
+    ReductionResult reduction = ReductionStep.reduce(
+      candidates.map((c) => c.position).toList(),
+      pathPoints.first.position,
+    );
     
-    Offset bestProjected = candidates.first.position;
-    double maxDistSq = -1.0;
-    
-    Offset p2 = pathPoints.first.position;
-    for (var candidate in candidates) {
-      Offset projected = pcaLine!.project(candidate.position);
-      double distSq = (projected - p2).distanceSquared;
-      if (distSq > maxDistSq) {
-        maxDistSq = distSq;
-        bestProjected = projected;
-      }
-    }
-    reducedPoint = bestProjected;
+    pcaLine = reduction.line;
+    reducedPoint = reduction.bestPoint;
 
     List<Offset> allPoints = [reducedPoint!, ...pathPoints.map((p) => p.position)];
     List<Offset> rawSplinePoints = SplineBuilder.buildCatmullRom(allPoints, samplesPerSegment: 100);
